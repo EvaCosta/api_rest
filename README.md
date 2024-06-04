@@ -1,3 +1,5 @@
+Claro! Aqui está a documentação atualizada com a inclusão da rota `/auth`:
+
 # API REST com Fastify e Sequelize
 
 Este projeto é uma API REST desenvolvida com Fastify e Sequelize, conectada a um banco de dados PostgreSQL.
@@ -59,7 +61,7 @@ A API utiliza JWT (JSON Web Token) para autenticação. Para acessar as rotas pr
 
 ### Obtendo um Token
 
-Por enquanto, esta API não implementa endpoints para login e geração de tokens. Você pode gerar um token usando a biblioteca `jsonwebtoken` no Node.js ou usar uma ferramenta online como [jwt.io](https://jwt.io/).
+A rota `/auth` pode ser usada para gerar um token JWT. Você deve enviar uma solicitação POST com as credenciais de usuário (email, username e senha) para receber um token válido.
 
 ### Usando o Token
 
@@ -118,38 +120,79 @@ Para testar as rotas protegidas com Insomnia:
 O middleware de autenticação verifica a validade do token JWT em cada requisição protegida. Veja a implementação em `src/utils/authUtils.ts`:
 
 ```typescript
-import jwt from "jsonwebtoken";
-import { FastifyRequest, FastifyReply, PreHandlerHookHandler } from "fastify";
+import { FastifyRequest, FastifyReply} from 'fastify';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-export const verifyToken: PreHandlerHookHandler = async function (request, reply) {
-  const token = request.headers.authorization?.split(" ")[1];
+dotenv.config();
 
-  if (!token) {
-    reply.code(401).send({ message: "Token de autorização não fornecido" });
-    return;
-  }
-
+export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    request.user = decoded;
+
+    if (request.url === '/auth') {
+      return;
+    }
+
+
+    let token = request?.headers['authorization'];
+    if (!token) {
+      reply.status(401).send({ error: 'Token não fornecido' });
+      return;
+    }
+    
+    token = token.split("Bearer ")[1];
+
+    const decoded = validate(token);
+   
+    if(!decoded){
+      reply.status(403).send({ error: 'Token inválido' });
+    }
+
   } catch (error) {
-    reply.code(401).send({ message: "Token de autorização inválido" });
+    reply.status(403).send({ error: 'Token inválido' });
   }
-};
+}
+
+function validate (token: string): string | null {
+  const generatedToken: any = jwt.verify(
+    token,
+    process.env.JWT_SECRET!,
+    (error, response) => {
+      if (error) {
+        return null
+      }
+      return response
+    })
+  return generatedToken ?? null
+}
+
 ```
 
 E sua aplicação nas rotas:
 
 ```typescript
-import { FastifyInstance } from "fastify";
-import * as CategoriaController from "../controllers/categoriaController";
-import { verifyToken } from "../utils/authUtils";
+import { authenticate } from "./utils/auth";
 
-export default async function categoriaRoutes(app: FastifyInstance) {
-  app.post("/categorias", CategoriaController.criarCategoria);
-  app.put("/categorias/:id", { preHandler: verifyToken }, CategoriaController.atualizarCategoria);
-  app.get("/categorias/:id", { preHandler: verifyToken }, CategoriaController.obterCategoria);
-  app.get("/categorias", { preHandler: verifyToken }, CategoriaController.listarCategorias);
-  app.delete("/categorias/:id", { preHandler: verifyToken }, CategoriaController.deletarCategoria);
-}
+const app = fastify();
+
+app.addHook("preHandler", authenticate);
 ```
+## Documentação da API
+
+A documentação da API pode ser encontrada na coleção do Insomnia disponível neste repositório. Você pode importar a coleção para o Insomnia e começar a usar imediatamente.
+
+### Importando a Coleção no Insomnia
+
+Para importar a coleção no Insomnia, siga estas etapas:
+
+1. Abra o Insomnia e vá para a barra lateral esquerda.
+2. Clique no botão **Import/Export** (ícone de seta para dentro e para fora).
+3. Selecione a opção **Import Data**.
+4. Escolha a opção **From File** e navegue até o arquivo da coleção que você deseja importar.
+5. Selecione o arquivo da coleção e clique em **Open**.
+6. A coleção será importada e aparecerá na barra lateral esquerda do Insomnia, sob a seção **Collections**.
+
+### Arquivo DDL do Banco de Dados
+
+O arquivo DDL (Data Definition Language) usado para criar o banco de dados PostgreSQL está disponível neste repositório. Você pode usar esse arquivo para criar o esquema do banco de dados localmente ou em seu ambiente de desenvolvimento.
+
