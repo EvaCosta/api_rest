@@ -6,7 +6,6 @@ import jwt from 'jsonwebtoken';
 export async function login(
     request: FastifyRequest<{
       Body: {
-        email: string;
         username: string;
         senha: string;
       };
@@ -15,13 +14,13 @@ export async function login(
   ) {
     try {
       const {
-        email,
         username,
         senha,
       } = request.body;
-  
+      console.log(username)
+      console.log(senha)
 
-      const clienteExistente = await Cliente.findOne({ where: { email } });
+      const clienteExistente = await Cliente.findOne({ where: { username } });
       
       if (clienteExistente) {
         const isValidPassword = await bcrypt.compare(senha, clienteExistente.senha! )
