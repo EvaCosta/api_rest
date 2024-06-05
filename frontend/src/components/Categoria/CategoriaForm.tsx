@@ -1,64 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { fetchCategoria, createCategoria, updateCategoria } from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { fetchCategorias, deleteCategoria } from '../../services/api';
 import { Categoria } from '../../types/Categoria';
-import './CategoriaForm.css';
+import './CategoriaList.css';
 
-const CategoriaForm: React.FC = () => {
-  const [nome_categoria, setNome] = useState('');
-  const [descricao_categoria, setDescricao] = useState('');
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+const CategoriaList: React.FC = () => {
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   useEffect(() => {
-    if (id) {
-      fetchCategoria(parseInt(id)).then((categoria: Categoria) => {
-        setNome(categoria.nome_categoria);
-        setDescricao(categoria.descricao_categoria);
-      });
-    }
-  }, [id]);
+    const fetchData = async () => {
+      const result = await fetchCategorias();
+      setCategorias(result);
+    };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const categoria: Partial<Categoria> = { nome_categoria, descricao_categoria };
+    fetchData();
+  }, []);
 
-    if (id) {
-      await updateCategoria(parseInt(id), categoria);
-    } else {
-      await createCategoria(categoria);
-    }
+  const handleDelete = async (id: number) => {
+    await deleteCategoria(id);
+    setCategorias(categorias.filter(categoria => categoria.categoria_id !== id));
+  };
 
-    navigate('/categorias');
+  const handleEdit = (id: number) => {
+    console.log('Editar categoria com ID:', id);
   };
 
   return (
     <div className="form-container">
-      <h2>{id ? 'Editar Categoria' : 'Nova Categoria'}</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="nome">Nome</label>
-          <input
-            id="nome"
-            type="text"
-            value={nome_categoria}
-            onChange={(e) => setNome(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="descricao">Descrição</label>
-          <textarea
-            id="descricao"
-            value={descricao_categoria}
-            onChange={(e) => setDescricao(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">{id ? 'Atualizar' : 'Criar'}</button>
-      </form>
+      <h2>Lista de Categorias</h2>
+      <ul>
+        {categorias.map(categoria => (
+          <li key={categoria.categoria_id}>
+            <span>{categoria.nome_categoria}</span>
+            <button className="edit" onClick={() => handleEdit(categoria.categoria_id)}>Editar</button>
+            <button onClick={() => handleDelete(categoria.categoria_id)}>Excluir</button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
 
-export default CategoriaForm;
+export default CategoriaList;
